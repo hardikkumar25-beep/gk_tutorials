@@ -15,4 +15,4 @@ class AcademicSession(Base):
     is_current: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    studentenrolls:Mapped[StudentEnrollment]=relationship(back_populates="academic_session")
+    student_enrollments:Mapped[list["StudentEnrollment"]]=relationship(back_populates="academic_session")
