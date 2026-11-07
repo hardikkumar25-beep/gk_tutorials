@@ -2,8 +2,11 @@ from datetime import date, datetime
 from sqlalchemy import Boolean, Date, DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column,relationship
 from app.db.base import Base
-from student_enrollment import StudentEnrollment
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.student_enrollment import StudentEnrollment
 
 class AcademicSession(Base):
     __tablename__ = "academic_sessions"
