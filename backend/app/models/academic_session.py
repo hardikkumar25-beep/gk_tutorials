@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from sqlalchemy import Boolean, Date, DateTime, String, func
+from sqlalchemy import Boolean, Date, DateTime, String, func,CheckConstraint,Index
 from sqlalchemy.orm import Mapped, mapped_column,relationship
 from app.db.base import Base
 
@@ -19,3 +19,9 @@ class AcademicSession(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     student_enrollments:Mapped[list["StudentEnrollment"]]=relationship(back_populates="academic_session")
+
+    __table_args__ = (CheckConstraint("end_date > start_date", name="check_end_date_after_start_date"),
+                      Index("uq_idx_only_one_current_session",
+                            "is_current",
+                            unique=True,
+                            postgresql_where="is_current IS TRUE",))
