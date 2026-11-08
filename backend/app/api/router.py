@@ -13,10 +13,10 @@ from app.schemas.subject import SubjectResponse,SubjectCreate,SubjectUpdate
 from app.services.subject_service import create_subject,get_subjects,get_subject_by_id,update_subject,deactivate_subject
 
 
-app = APIRouter()
+api_router = APIRouter()
 
 #Auth
-@app.post("/auth/login", response_model=TokenResponse)
+@api_router.post("/auth/login", response_model=TokenResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     user = db.scalar(select(User).where(User.email == payload.email.lower()))
     if user is None or not verify_password(payload.password, user.hashed_password):
@@ -26,7 +26,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     return TokenResponse(access_token=create_access_token(str(user.id)))
 
 
-@app.get("/auth/me", response_model=UserResponse)
+@api_router.get("/auth/me", response_model=UserResponse)
 def me(current_user: User = Depends(get_current_user)):
     return current_user
 
@@ -43,7 +43,7 @@ def handle_subject_error(db: Session, exc: ValueError):
         error_status = status.HTTP_400_BAD_REQUEST
     raise HTTPException(status_code=error_status,detail=message,)
 
-@app.router.post("/subjects",response_model=SubjectResponse,status_code=status.HTTP_201_CREATED,)
+@api_router.post("/subjects",response_model=SubjectResponse,status_code=status.HTTP_201_CREATED,)
 def create_subject_endpoint(payload:SubjectCreate,db:Session=Depends(get_db),current_user:User=Depends(get_current_user)):
     try:
         subject=create_subject(db,payload)
@@ -51,12 +51,12 @@ def create_subject_endpoint(payload:SubjectCreate,db:Session=Depends(get_db),cur
         db.refresh(subject)
         return subject
     except ValueError as e:
-        handle_subject_error(e)
+        handle_subject_error(db,e)
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,detail="A subject with these details already exists.",)
 
-@app.router.get("/subjects",response_model=list[SubjectResponse])
+@api_router.get("/subjects",response_model=list[SubjectResponse])
 def list_all_subjects(class_number: int | None = Query(default=None, ge=9, le=12),stream: Literal["Science", "Commerce"] | None = None,is_active: bool | None = True,db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),):
     try:
@@ -64,7 +64,7 @@ def list_all_subjects(class_number: int | None = Query(default=None, ge=9, le=12
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail=str(e))
 
-@app.get("/subjects/{subject_id}",response_model=SubjectResponse,)
+@api_router.get("/subjects/{subject_id}",response_model=SubjectResponse,)
 def get_subject_endpoint(subject_id: int,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
     subject = get_subject_by_id(db, subject_id)
 
@@ -72,7 +72,7 @@ def get_subject_endpoint(subject_id: int,db: Session = Depends(get_db),current_u
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="Subject not found.",)
     return subject
 
-@app.patch("/subjects/{subject_id}",response_model=SubjectResponse,)
+@api_router.patch("/subjects/{subject_id}",response_model=SubjectResponse,)
 def update_subject_endpoint(subject_id: int,payload: SubjectUpdate,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
     try:
         subject = update_subject(db=db,subject_id=subject_id,subject_data=payload,)
@@ -85,7 +85,7 @@ def update_subject_endpoint(subject_id: int,payload: SubjectUpdate,db: Session =
         db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,detail="Could not update subject because of a database constraint.",)
 
-@app.patch("/subjects/{subject_id}/deactivate",response_model=SubjectResponse,)
+@api_router.patch("/subjects/{subject_id}/deactivate",response_model=SubjectResponse,)
 def deactivate_subject_endpoint(subject_id: int,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
     try:
         subject = deactivate_subject(db=db,subject_id=subject_id,)
