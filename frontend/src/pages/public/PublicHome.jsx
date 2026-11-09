@@ -16,6 +16,31 @@ import api from "../../services/api";
 
 const INSTITUTE_PHONE = "+917065913913";
 
+const teachers = [
+  {
+    name: "Gaurav Kumar",
+    experience: "X Years",
+    subjects: "Mathematics",
+    photo: "https://i.pravatar.cc/400?img=12",
+    contact: "Contact through institute",
+  },
+  {
+    name: "XXXXXX",
+    experience: "X Years",
+    subjects: "Chemistry",
+    photo: "https://i.pravatar.cc/400?img=47",
+    contact: "Contact through institute",
+  },
+  {
+    name: "XXXX",
+    experience: "X Years",
+    subjects: "Physics",
+    photo: "https://i.pravatar.cc/400?img=13",
+    contact: "Contact through institute",
+  },
+];
+
+
 export default function PublicHome() {
   const [onlineClass, setOnlineClass] = useState(null);
   const [classLoading, setClassLoading] = useState(true);
@@ -57,17 +82,52 @@ export default function PublicHome() {
           </span>
         </Link>
 
-        <div className="nav-links">
-          <a href="#courses">Courses</a>
-          <a href="#online-classes" className="nav-online-classes">
-            Online Classes
-          </a>
-          <a href="#about">About</a>
-          <a href="#contact">Contact</a>
-          <a href="#enquiry" className="nav-enquiry">
-            Enquire Now
-          </a>
-        </div>
+      <div className="nav-links">
+        <a href="#courses">Courses</a>
+        <a href="#teachers">Teachers</a>
+        <a href="#online-classes" className="nav-online-classes">
+          Online Classes
+        </a>
+        <a href="#about">About</a>
+        <a href="#contact">Contact</a>
+        <a href="#enquiry" className="nav-enquiry">
+          Enquire Now
+        </a>
+
+        <a
+          href="https://www.instagram.com/gk_tutorials01/"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Instagram"
+          title="Instagram"
+          className="nav-social-link"
+        >
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="1.8"
+            strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="5" />
+            <circle cx="12" cy="12" r="4" />
+            <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none" />
+          </svg>
+        </a>
+
+        <a
+          href="https://www.youtube.com/@G.Ktutorials2008"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="YouTube"
+          title="YouTube"
+          className="nav-social-link"
+        >
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="1.8"
+            strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="4" />
+            <polygon points="10 8.5 16 12 10 15.5 10 8.5" fill="currentColor" stroke="none" />
+          </svg>
+        </a>
+      </div>
+
       </nav>
 
       {/* Hero */}
@@ -185,6 +245,56 @@ export default function PublicHome() {
           </a>
         </div>
       </section>
+
+{/* Teachers */}
+<section className="section teachers-section" id="teachers">
+  <div className="section-heading public-section-heading">
+    <span className="eyebrow">MEET OUR FACULTY</span>
+    <h2>Learn from experienced teachers.</h2>
+    <p>
+      Dedicated educators helping students understand concepts
+      and achieve their academic goals.
+    </p>
+  </div>
+
+  <div className="teachers-grid">
+    {teachers.map((teacher, index) => (
+      <article className="teacher-card" key={teacher.name}>
+        <div className="teacher-photo-wrapper">
+          <img
+            src={teacher.photo}
+            alt={teacher.name}
+            className="teacher-photo"
+            loading="lazy"
+          />
+        </div>
+
+        <div className="teacher-details">
+          <span className="teacher-number">
+            FACULTY MEMBER 0{index + 1}
+          </span>
+
+          <h3>{teacher.name}</h3>
+
+          <p className="teacher-experience">
+            <GraduationCap size={16} />
+            {teacher.experience} of experience
+          </p>
+
+          <div className="teacher-subjects">
+            <BookOpen size={16} />
+            <span>{teacher.subjects}</span>
+          </div>
+
+          <div className="teacher-contact">
+            <Phone size={15} />
+            <span>{teacher.contact}</span>
+          </div>
+        </div>
+      </article>
+    ))}
+  </div>
+</section>
 
       {/* Online Classes */}
       <section className="online-class-section" id="online-classes">
