@@ -12,9 +12,10 @@ from app.schemas.auth import LoginRequest, TokenResponse, UserResponse
 from app.schemas.subject import SubjectResponse,SubjectCreate,SubjectUpdate
 from app.services.subject_service import create_subject,get_subjects,get_subject_by_id,update_subject,deactivate_subject
 from app.schemas.student import AdmissionCreate,StudentProfileResponse,StudentListResponse,StudentUpdate
-from app.services.student_service import create_admission,get_student_by_id,search_students,update_student,deactivate_student
+from app.services.student_service import create_admission,get_student_by_id,search_students,update_student,deactivate_student,cancel_student_enrollment
 from app.services.academic_session_service import get_current_academic_session
 from app.schemas.academic_session import AcademicSessionResponse
+
 
 
 api_router = APIRouter()
@@ -218,7 +219,31 @@ def deactivate_student_endpoint(student_id: int,db: Session = Depends(get_db),cu
         db.rollback()
         raise
 
+@api_router.patch(
+    "/students/{student_id}/enrollments/{enrollment_id}/cancel",
+    response_model=StudentProfileResponse,
+)
+def cancel_student_enrollment_endpoint(student_id: int,enrollment_id: int,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
+    try:
+        cancel_student_enrollment(db,student_id,enrollment_id,)
 
+        db.commit()
+
+        profile = get_student_by_id(db, student_id)
+
+        return profile
+
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc))
+
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc))
+
+    except Exception:
+        db.rollback()
+        raise
 # Academic Sessions
 
 @api_router.get("/academic-sessions/current",response_model=AcademicSessionResponse,)

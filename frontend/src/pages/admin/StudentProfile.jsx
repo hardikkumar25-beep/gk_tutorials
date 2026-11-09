@@ -4,13 +4,14 @@ import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   User,
-  Phone,
   GraduationCap,
   BookOpen,
   CalendarDays,
-  Mail,
   MapPin,
-  School,
+  Pencil,
+  Save,
+  X,
+  Ban,
 } from "lucide-react";
 
 import api from "../../services/api";
@@ -53,12 +54,97 @@ function Status({ value }) {
   );
 }
 
+const emptyForm = {
+  full_name: "",
+  date_of_birth: "",
+  gender: "",
+  email: "",
+  student_phone: "",
+  mother_phone: "",
+  father_phone: "",
+  address: "",
+  school_name: "",
+  school_address: "",
+  referral_source: "",
+};
+
+function createFormData(student) {
+  return {
+    full_name: student.full_name || "",
+    date_of_birth: student.date_of_birth || "",
+    gender: student.gender || "",
+    email: student.email || "",
+    student_phone: student.student_phone || "",
+    mother_phone: student.mother_phone || "",
+    father_phone: student.father_phone || "",
+    address: student.address || "",
+    school_name: student.school_name || "",
+    school_address: student.school_address || "",
+    referral_source: student.referral_source || "",
+  };
+}
+function getErrorMessage(err, fallback) {
+  const detail = err.response?.data?.detail;
+
+  if (typeof detail === "string") {
+    return detail;
+  }
+
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => item.msg || "Invalid input")
+      .join(". ");
+  }
+
+  return fallback;
+}
+function FormField({
+  label,
+  name,
+  value,
+  onChange,
+  type = "text",
+  required = false,
+  max,
+}) {
+  return (
+    <label className="profile-form-field">
+      <span>{label}{required ? " *" : ""}</span>
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        required={required}
+        max={max}
+      />
+    </label>
+  );
+}
+function getToday() {
+  const today = new Date();
+
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
 export default function StudentProfile() {
   const { studentId } = useParams();
 
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [saveSuccess, setSaveSuccess] = useState("");
+
+  const [cancellingId, setCancellingId] = useState(null);
+  const [cancelError, setCancelError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +158,7 @@ export default function StudentProfile() {
 
         if (!cancelled) {
           setStudent(response.data);
+          setForm(createFormData(response.data));
         }
       } catch (err) {
         if (!cancelled) {
@@ -93,6 +180,99 @@ export default function StudentProfile() {
       cancelled = true;
     };
   }, [studentId]);
+
+  function startEditing() {
+    setForm(createFormData(student));
+    setSaveError("");
+    setSaveSuccess("");
+    setEditing(true);
+  }
+
+  function stopEditing() {
+    setForm(createFormData(student));
+    setSaveError("");
+    setEditing(false);
+  }
+
+  function handleChange(event) {
+    const { name, value } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  }
+
+    async function handleSave(event) {
+    event.preventDefault();
+
+    setSaving(true);
+    setSaveError("");
+    setSaveSuccess("");
+
+    const payload = {
+        full_name: form.full_name.trim(),
+        date_of_birth: form.date_of_birth || null,
+        gender: form.gender.trim() || null,
+        email: form.email.trim() || null,
+        student_phone: form.student_phone.trim() || null,
+        mother_phone: form.mother_phone.trim() || null,
+        father_phone: form.father_phone.trim() || null,
+        address: form.address.trim() || null,
+        school_name: form.school_name.trim() || null,
+        school_address: form.school_address.trim() || null,
+        referral_source: form.referral_source.trim() || null,
+    };
+
+    try {
+        const response = await api.patch(
+        `/students/${studentId}`,
+        payload
+        );
+
+        setStudent(response.data);
+        setForm(createFormData(response.data));
+        setEditing(false);
+        setSaveSuccess("Student details updated successfully.");
+    } catch (err) {
+        setSaveError(
+        getErrorMessage(
+            err,
+            "Unable to update student details."
+        )
+        );
+    } finally {
+        setSaving(false);
+    }
+    }
+
+  async function handleCancelEnrollment(enrollment) {
+    const confirmed = window.confirm(
+      `Cancel admission for ${student.full_name} in Class ${enrollment.class_number}? This will preserve the historical record but mark this enrolment as cancelled.`
+    );
+
+    if (!confirmed) return;
+
+    setCancellingId(enrollment.id);
+    setCancelError("");
+
+    try {
+      const response = await api.patch(
+        `/students/${studentId}/enrollments/${enrollment.id}/cancel`
+      );
+
+      setStudent(response.data);
+    } catch (err) {
+  setCancelError(
+    getErrorMessage(
+      err,
+      "Unable to cancel this admission."
+    )
+  );
+    } finally {
+      setCancellingId(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -133,16 +313,12 @@ export default function StudentProfile() {
   return (
     <div className="admin-shell">
       <main className="admin-main">
-
-        {/* Top bar */}
         <header className="admin-topbar">
           <span>Management / Students / Profile</span>
           <span className="admin-user">Institute Admin</span>
         </header>
 
         <section className="dashboard-content">
-
-          {/* Page heading */}
           <div className="page-heading">
             <div>
               <span className="eyebrow">
@@ -151,9 +327,7 @@ export default function StudentProfile() {
 
               <h1>{student.full_name}</h1>
 
-              <p>
-                Student ID: {student.student_code}
-              </p>
+              <p>Student ID: {student.student_code}</p>
             </div>
 
             <Link
@@ -165,7 +339,12 @@ export default function StudentProfile() {
             </Link>
           </div>
 
-          {/* Student summary */}
+          {saveSuccess && (
+            <div className="profile-success-message">
+              {saveSuccess}
+            </div>
+          )}
+
           <div className="profile-summary">
             <div className="profile-avatar">
               <User size={28} />
@@ -181,78 +360,214 @@ export default function StudentProfile() {
 
           {/* Personal information */}
           <div className="profile-card">
-            <div className="profile-card-heading">
-              <User size={19} />
-              <h2>Personal Information</h2>
+            <div className="profile-card-heading profile-edit-heading">
+              <div>
+                <User size={19} />
+                <h2>Personal Information</h2>
+              </div>
+
+              {!editing && (
+                <button
+                  type="button"
+                  className="button button-primary"
+                  onClick={startEditing}
+                >
+                  <Pencil size={15} />
+                  Edit Details
+                </button>
+              )}
             </div>
 
-            <div className="profile-grid">
-              <Detail
-                label="Full Name"
-                value={student.full_name}
-              />
+            {editing ? (
+              <form onSubmit={handleSave}>
+                <div className="profile-form-grid">
+                  <FormField
+                    label="Full Name"
+                    name="full_name"
+                    value={form.full_name}
+                    onChange={handleChange}
+                    required
+                  />
 
-              <Detail
-                label="Date of Birth"
-                value={formatDate(student.date_of_birth)}
-              />
+                <FormField
+                    label="Date of Birth"
+                    name="date_of_birth"
+                    type="date"
+                    value={form.date_of_birth}
+                    onChange={handleChange}
+                    max={getToday()}
+                />
 
-              <Detail
-                label="Gender"
-                value={student.gender}
-              />
+                  <label className="profile-form-field">
+                    <span>Gender</span>
+                    <select
+                      name="gender"
+                      value={form.gender}
+                      onChange={handleChange}
+                    >
+                      <option value="">Select gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </label>
 
-              <Detail
-                label="Email Address"
-                value={student.email}
-              />
+                  <FormField
+                    label="Email Address"
+                    name="email"
+                    type="email"
+                    value={form.email}
+                    onChange={handleChange}
+                  />
 
-              <Detail
-                label="Student Contact"
-                value={student.student_phone}
-              />
+                  <FormField
+                    label="Student Contact"
+                    name="student_phone"
+                    value={form.student_phone}
+                    onChange={handleChange}
+                  />
 
-              <Detail
-                label="Mother's Contact"
-                value={student.mother_phone}
-              />
+                  <FormField
+                    label="Mother's Contact"
+                    name="mother_phone"
+                    value={form.mother_phone}
+                    onChange={handleChange}
+                  />
 
-              <Detail
-                label="Father's Contact"
-                value={student.father_phone}
-              />
+                  <FormField
+                    label="Father's Contact"
+                    name="father_phone"
+                    value={form.father_phone}
+                    onChange={handleChange}
+                  />
 
-              <Detail
-                label="Referral Source"
-                value={student.referral_source}
-              />
-            </div>
+                  <FormField
+                    label="Referral Source"
+                    name="referral_source"
+                    value={form.referral_source}
+                    onChange={handleChange}
+                  />
+
+                  <FormField
+                    label="Residential Address"
+                    name="address"
+                    value={form.address}
+                    onChange={handleChange}
+                  />
+
+                  <FormField
+                    label="School Name"
+                    name="school_name"
+                    value={form.school_name}
+                    onChange={handleChange}
+                  />
+
+                  <FormField
+                    label="School Address"
+                    name="school_address"
+                    value={form.school_address}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                {saveError && (
+                  <div className="profile-error-message">
+                    {saveError}
+                  </div>
+                )}
+
+                <div className="profile-form-actions">
+                  <button
+                    type="button"
+                    className="button button-outline"
+                    onClick={stopEditing}
+                    disabled={saving}
+                  >
+                    <X size={15} />
+                    Discard
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="button button-primary"
+                    disabled={saving}
+                  >
+                    <Save size={15} />
+                    {saving ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="profile-grid">
+                <Detail
+                  label="Full Name"
+                  value={student.full_name}
+                />
+
+                <Detail
+                  label="Date of Birth"
+                  value={formatDate(student.date_of_birth)}
+                />
+
+                <Detail
+                  label="Gender"
+                  value={student.gender}
+                />
+
+                <Detail
+                  label="Email Address"
+                  value={student.email}
+                />
+
+                <Detail
+                  label="Student Contact"
+                  value={student.student_phone}
+                />
+
+                <Detail
+                  label="Mother's Contact"
+                  value={student.mother_phone}
+                />
+
+                <Detail
+                  label="Father's Contact"
+                  value={student.father_phone}
+                />
+
+                <Detail
+                  label="Referral Source"
+                  value={student.referral_source}
+                />
+              </div>
+            )}
           </div>
 
           {/* Address and school */}
-          <div className="profile-card">
-            <div className="profile-card-heading">
-              <MapPin size={19} />
-              <h2>Address & School</h2>
+          {!editing && (
+            <div className="profile-card">
+              <div className="profile-card-heading">
+                <MapPin size={19} />
+                <h2>Address & School</h2>
+              </div>
+
+              <div className="profile-grid">
+                <Detail
+                  label="Residential Address"
+                  value={student.address}
+                />
+
+                <Detail
+                  label="School Name"
+                  value={student.school_name}
+                />
+
+                <Detail
+                  label="School Address"
+                  value={student.school_address}
+                />
+              </div>
             </div>
-
-            <div className="profile-grid">
-              <Detail
-                label="Residential Address"
-                value={student.address}
-              />
-
-              <Detail
-                label="School Name"
-                value={student.school_name}
-              />
-
-              <Detail
-                label="School Address"
-                value={student.school_address}
-              />
-            </div>
-          </div>
+          )}
 
           {/* Academic enrolments */}
           <div className="profile-card">
@@ -260,6 +575,12 @@ export default function StudentProfile() {
               <GraduationCap size={20} />
               <h2>Academic Enrolments</h2>
             </div>
+
+            {cancelError && (
+              <div className="profile-error-message">
+                {cancelError}
+              </div>
+            )}
 
             {enrollments.length === 0 ? (
               <p className="profile-empty">
@@ -317,14 +638,31 @@ export default function StudentProfile() {
                         )}
                       </div>
                     </div>
+
+                    {enrollment.status === "active" && (
+                      <div className="enrollment-actions">
+                        <button
+                          type="button"
+                          className="button button-danger-outline"
+                          onClick={() =>
+                            handleCancelEnrollment(enrollment)
+                          }
+                          disabled={cancellingId !== null}
+                        >
+                          <Ban size={15} />
+                          {cancellingId === enrollment.id
+                            ? "Cancelling..."
+                            : "Cancel Admission"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             )}
           </div>
-
         </section>
       </main>
     </div>
-  );
+    );
 }

@@ -223,4 +223,29 @@ def deactivate_student(db: Session,student_id: int,) -> Student:
 
     return student
 
+def cancel_student_enrollment(db: Session,student_id: int,enrollment_id: int,) -> Student:
+    """
+    Cancel one academic enrolment without deleting historical records
+    or deactivating the student's overall profile.
+    """
 
+    student = get_student_by_id(db, student_id)
+    if student is None:
+        raise LookupError("Student not found.")
+    enrollment = db.scalar(
+        select(StudentEnrollment).where(
+            StudentEnrollment.id == enrollment_id,
+            StudentEnrollment.student_id == student_id,
+        )
+    )
+    if enrollment is None:
+        raise LookupError("Enrolment not found for this student.")
+
+    if enrollment.status != "active":
+        raise ValueError("This enrolment is not active.")
+
+    enrollment.status = "cancelled"
+
+    db.flush()
+
+    return student
