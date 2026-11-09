@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 from urllib.parse import urlparse
 
@@ -9,12 +10,12 @@ class OnlineClassUpdate(BaseModel):
     )
 
     title: str = Field(min_length=2, max_length=150)
-    youtube_url: HttpUrl
+    url: HttpUrl
     is_published: bool = False
 
-    @field_validator("youtube_url")
+    @field_validator("url")
     @classmethod
-    def validate_youtube_url(cls, value):
+    def validate_url(cls, value):
         allowed_hosts = {
             "youtube.com",
             "www.youtube.com",
@@ -36,6 +37,6 @@ class OnlineClassResponse(BaseModel):
 
     id: int
     title: str
-    youtube_url: str
+    url: str
     is_published: bool
-    updated_at: object
+    updated_at: datetime

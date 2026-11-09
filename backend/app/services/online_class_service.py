@@ -25,14 +25,14 @@ def update_online_class(db: Session, data: OnlineClassUpdate,):
         online_class = OnlineClass(
             id=1,
             title=data.title,
-            youtube_url=str(data.youtube_url),
+            url=str(data.url),
             is_published=data.is_published,
         )
 
         db.add(online_class)
     else:
         online_class.title = data.title
-        online_class.youtube_url = str(data.youtube_url)
+        online_class.url = str(data.url)
         online_class.is_published = data.is_published
 
     db.flush()

@@ -19,9 +19,8 @@ from app.schemas.teacher import TeacherCreate,TeacherUpdate,TeacherResponse
 from app.schemas.batch import BatchCreate,BatchUpdate,BatchResponse
 from app.services.teacher_service import create_teacher,get_teachers,update_teacher,deactivate_teacher
 from app.services.batch_service import create_batch,get_batches,get_batch_by_id,update_batch,deactivate_batch
-from app.schemas.online_class import OnlineClassUpdate,OnlineClassResponse,
-
-from app.services.online_class_service import get_online_class,get_public_online_class,update_online_class,
+from app.schemas.online_class import OnlineClassUpdate,OnlineClassResponse
+from app.services.online_class_service import get_online_class,get_public_online_class,update_online_class
 
 api_router = APIRouter()
 
