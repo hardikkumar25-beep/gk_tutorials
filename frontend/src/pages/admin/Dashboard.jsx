@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { BookOpen, CalendarCheck, ClipboardList, IndianRupee, LayoutDashboard, LogOut, UserPlus, Users } from "lucide-react";
 
@@ -17,7 +18,7 @@ export default function Dashboard() {
         <div className="sidebar-label">MENU</div>
         <a className="side-link active"><LayoutDashboard size={18} /> Dashboard</a>
         <a className="side-link"><ClipboardList size={18} /> Enquiries</a>
-        <a className="side-link"><Users size={18} /> Students</a>
+        <Link className="side-link" to="/admin/students"><Users size={18} />Students</Link>
         <a className="side-link"><BookOpen size={18} /> Batches</a>
         <a className="side-link"><IndianRupee size={18} /> Fees & payments</a>
         <a className="side-link"><CalendarCheck size={18} /> Attendance</a>
