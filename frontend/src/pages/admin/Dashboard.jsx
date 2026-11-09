@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { BookOpen, CalendarCheck, ClipboardList, IndianRupee, LayoutDashboard, LogOut, UserPlus, Users,UserRound} from "lucide-react";
+import { BookOpen, CalendarCheck, ClipboardList, IndianRupee, LayoutDashboard, LogOut, UserPlus, Users,UserRound,Radio} from "lucide-react";
 
 const actions = [
   { label: "New admission", detail: "Register a student", icon: UserPlus },
@@ -17,6 +17,7 @@ export default function Dashboard() {
         <a className="brand sidebar-brand" href="/"><span className="brand-mark">GK</span><span><strong>G.K. TUTORIALS</strong><small>Management</small></span></a>
         <div className="sidebar-label">MENU</div>
         <a className="side-link active"><LayoutDashboard size={18} /> Dashboard</a>
+        <Link to="/admin/online-class" className="side-link"><Radio size={18} /><span>Online Classes</span></Link>
         <a className="side-link"><ClipboardList size={18} /> Enquiries</a>
         <Link className="side-link" to="/admin/students"><Users size={18} />Students</Link>
         <Link className="side-link" to="/admin/teachers"><UserRound size={18} />Teachers</Link>

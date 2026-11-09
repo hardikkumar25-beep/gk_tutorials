@@ -9,6 +9,7 @@ import StudentProfile from "./pages/admin/StudentProfile";
 import AdmissionForm from "./pages/admin/AdmissionForm";
 import Teachers from "./pages/admin/Teachers";
 import Batches from "./pages/admin/Batches";
+import OnlineClass from "./pages/admin/OnlineClass";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -73,6 +74,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Batches />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/online-class"
+        element={
+          <ProtectedRoute>
+            <OnlineClass />
           </ProtectedRoute>
         }
       />

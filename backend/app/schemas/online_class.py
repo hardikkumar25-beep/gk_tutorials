@@ -17,11 +17,17 @@ class OnlineClassUpdate(BaseModel):
     @classmethod
     def validate_url(cls, value):
         allowed_hosts = {
+            # YouTube
             "youtube.com",
             "www.youtube.com",
+            "https://youtube.com/",
             "m.youtube.com",
             "youtu.be",
             "www.youtu.be",
+            "meet.google.com",
+            "zoom.us",
+            "www.zoom.us",
+            "app.zoom.us",
         }
 
         parsed = urlparse(str(value))
