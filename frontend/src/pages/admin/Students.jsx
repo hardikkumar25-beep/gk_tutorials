@@ -325,10 +325,16 @@ export default function Students() {
                     return (
                       <tr key={student.id}>
 
-                        <td>
-                          <strong>{student.full_name}</strong>
-                          <small>{student.email || "—"}</small>
-                        </td>
+                    <td>
+                    <Link
+                        to={`/admin/students/${student.id}`}
+                        className="student-name-link"
+                    >
+                        {student.full_name}
+                    </Link>
+
+                    <small>{student.email || "—"}</small>
+                    </td>
 
                         <td>
                           <span className="student-code">

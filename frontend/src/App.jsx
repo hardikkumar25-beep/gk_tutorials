@@ -5,6 +5,7 @@ import PublicHome from "./pages/public/PublicHome";
 import Login from "./pages/admin/Login";
 import Dashboard from "./pages/admin/Dashboard";
 import Students from "./pages/admin/Students";
+import StudentProfile from "./pages/admin/StudentProfile";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -37,6 +38,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Students />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/students/:studentId"
+        element={
+          <ProtectedRoute>
+            <StudentProfile />
           </ProtectedRoute>
         }
       />
