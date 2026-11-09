@@ -8,6 +8,7 @@ import {
   RefreshCw,
   Search,
   Users,
+  UserRound,
   LogOut,
 } from "lucide-react";
 
@@ -163,6 +164,10 @@ export default function Students() {
         >
           <Users size={18} />
           Students
+        </Link>
+        <Link className="side-link" to="/admin/teachers">
+          <UserRound size={18} />
+          Teachers
         </Link>
 
         <div className="sidebar-bottom">

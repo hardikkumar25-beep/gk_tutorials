@@ -7,6 +7,7 @@ import Dashboard from "./pages/admin/Dashboard";
 import Students from "./pages/admin/Students";
 import StudentProfile from "./pages/admin/StudentProfile";
 import AdmissionForm from "./pages/admin/AdmissionForm";
+import Teachers from "./pages/admin/Teachers";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -58,6 +59,14 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/admin/teachers"
+        element={
+          <ProtectedRoute>
+            <Teachers />
+          </ProtectedRoute>
+        }
+/>
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
