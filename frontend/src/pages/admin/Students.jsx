@@ -27,7 +27,7 @@ export default function Students() {
   const [search, setSearch] = useState("");
   const [classNumber, setClassNumber] = useState("");
   const [stream, setStream] = useState("");
-  const [enrollmentStatus, setEnrollmentStatus] = useState("active");
+  const [enrollmentStatus, setEnrollmentStatus] = useState("");
 
   // Pagination
   const [page, setPage] = useState(0);
