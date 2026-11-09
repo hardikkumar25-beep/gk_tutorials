@@ -21,8 +21,7 @@ def get_dashboard_summary(db: Session):
     if current_session:
         admissions_this_session = db.scalar(
             select(func.count(StudentEnrollment.id)).where(
-                StudentEnrollment.academic_session_id == current_session.id,
-                StudentEnrollment.status == "active",
+                StudentEnrollment.academic_session_id == current_session.id
             )
         ) or 0
 
