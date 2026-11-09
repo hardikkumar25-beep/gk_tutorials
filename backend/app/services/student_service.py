@@ -174,3 +174,53 @@ def search_students(
 
     return students, total
 
+
+def update_student(db: Session,student_id: int,updates,) -> Student:
+    """Update personal details without modifying academic history."""
+    student = db.get(Student, student_id)
+    if student is None:
+        raise LookupError("Student not found.")
+    data = updates.model_dump(exclude_unset=True)
+    if "full_name" in data:
+        if data["full_name"] is None or not data["full_name"].strip():
+            raise ValueError("Student name cannot be empty.")
+    contact_fields = ["student_phone","mother_phone","father_phone",]
+    final_contacts = {
+        field: data.get(field, getattr(student, field))
+        for field in contact_fields}
+    if not any(final_contacts.values()):
+        raise ValueError("At least one student or parent contact number is required.")
+
+    for field, value in data.items():
+        if field == "email" and value is not None:
+            value = str(value)
+        setattr(student, field, value)
+    db.flush()
+    return student
+
+
+def deactivate_student(db: Session,student_id: int,) -> Student:
+    """
+    Deactivate a student and cancel their active enrolments.
+    Historical records and subject associations are preserved.
+    """
+
+    student = get_student_by_id(db, student_id)
+
+    if student is None:
+        raise LookupError("Student not found.")
+
+    if student.status == "inactive":
+        raise ValueError("Student is already inactive.")
+
+    student.status = "inactive"
+
+    for enrollment in student.enrollments:
+        if enrollment.status == "active":
+            enrollment.status = "cancelled"
+
+    db.flush()
+
+    return student
+
+

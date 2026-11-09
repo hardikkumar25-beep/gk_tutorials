@@ -111,3 +111,31 @@ class StudentProfileResponse(StudentResponse):
 class StudentListResponse(BaseModel):
     total: int
     items: list[StudentProfileResponse]
+
+
+class StudentUpdate(BaseModel):
+    full_name: str | None = Field(default=None, min_length=2, max_length=150)
+    date_of_birth: date | None = None
+    gender: str | None = Field(default=None, max_length=30)
+    email: EmailStr | None = None
+
+    student_phone: str | None = Field(default=None, max_length=20)
+    mother_phone: str | None = Field(default=None, max_length=20)
+    father_phone: str | None = Field(default=None, max_length=20)
+
+    address: str | None = None
+    school_name: str | None = Field(default=None, max_length=180)
+    school_address: str | None = None
+    referral_source: str | None = Field(default=None, max_length=150)
+
+    model_config = ConfigDict(str_strip_whitespace=True,extra="forbid",)
+
+    @model_validator(mode="after")
+    def validate_update(self):
+        if not self.model_fields_set:
+            raise ValueError("At least one field must be provided.")
+
+        if self.date_of_birth and self.date_of_birth > date.today():
+            raise ValueError("Date of birth cannot be in the future.")
+        return self
+

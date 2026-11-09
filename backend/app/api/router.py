@@ -11,8 +11,8 @@ from app.models.user import User
 from app.schemas.auth import LoginRequest, TokenResponse, UserResponse
 from app.schemas.subject import SubjectResponse,SubjectCreate,SubjectUpdate
 from app.services.subject_service import create_subject,get_subjects,get_subject_by_id,update_subject,deactivate_subject
-from app.schemas.student import AdmissionCreate,StudentProfileResponse,StudentListResponse
-from app.services.student_service import create_admission,get_student_by_id,search_students
+from app.schemas.student import AdmissionCreate,StudentProfileResponse,StudentListResponse,StudentUpdate
+from app.services.student_service import create_admission,get_student_by_id,search_students,update_student,deactivate_student
 
 
 api_router = APIRouter()
@@ -162,11 +162,7 @@ def list_students(
 
 
 @api_router.get("/students/{student_id}",response_model=StudentProfileResponse,)
-def student_profile(
-    student_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
+def student_profile(student_id: int,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
     student = get_student_by_id(db, student_id)
 
     if student is None:
@@ -174,5 +170,50 @@ def student_profile(
 
     return student
 
+
+@api_router.patch("/students/{student_id}",response_model=StudentProfileResponse,)
+def edit_student(student_id: int,updates: StudentUpdate,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):    
+    try:
+        update_student(db, student_id, updates)
+        db.commit()
+
+        profile = get_student_by_id(db, student_id)
+
+        return profile
+
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc))
+
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    except Exception:
+        db.rollback()
+        raise
+
+
+@api_router.patch("/students/{student_id}/deactivate",response_model=StudentProfileResponse,)
+def deactivate_student_endpoint(student_id: int,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
+    try:
+        deactivate_student(db, student_id)
+        db.commit()
+
+        profile = get_student_by_id(db, student_id)
+
+        return profile
+
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc))
+
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc))
+
+    except Exception:
+        db.rollback()
+        raise
 
 
