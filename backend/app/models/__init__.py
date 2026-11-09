@@ -3,6 +3,7 @@ from app.models.academic_session import AcademicSession
 from app.models.student import Student
 from app.models.student_enrollment import StudentEnrollment
 from app.models.subject import Subject
+from app.models.teacher import Teacher
 
 __all__ = [
     "User",
@@ -10,4 +11,5 @@ __all__ = [
     "Student",
     "StudentEnrollment",
     "Subject",
+    "Teacher",
 ]

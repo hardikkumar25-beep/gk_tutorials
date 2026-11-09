@@ -25,3 +25,4 @@ class AcademicSession(Base):
                             "is_current",
                             unique=True,
                             postgresql_where="is_current IS TRUE",))
+    
