@@ -98,7 +98,7 @@ def test_successful_admission(db, current_session, class_9_subjects):
     student = create_admission(db, admission)
 
     assert student.id is not None
-    assert student.student_code.startswith("GKT-")
+    assert student.student_code.startswith("GK-")
     assert student.full_name == "Test Student"
 
     enrollment = db.scalar(
