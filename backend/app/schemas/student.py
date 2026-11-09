@@ -84,6 +84,14 @@ class StudentResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class SubjectResponse(BaseModel):
+    id: int
+    subject_name: str
+    class_number: int
+    stream: str | None
+    is_active: bool
+
+    model_config = ConfigDict(from_attributes=True)
 
 class EnrollmentResponse(BaseModel):
     id: int
@@ -95,17 +103,6 @@ class EnrollmentResponse(BaseModel):
     subjects: list["SubjectResponse"]
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class SubjectResponse(BaseModel):
-    id: int
-    subject_name: str
-    class_number: int
-    stream: str | None
-    is_active: bool
-
-    model_config = ConfigDict(from_attributes=True)
-
 
 class StudentProfileResponse(StudentResponse):
     enrollments: list[EnrollmentResponse]

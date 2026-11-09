@@ -11,6 +11,8 @@ from app.models.user import User
 from app.schemas.auth import LoginRequest, TokenResponse, UserResponse
 from app.schemas.subject import SubjectResponse,SubjectCreate,SubjectUpdate
 from app.services.subject_service import create_subject,get_subjects,get_subject_by_id,update_subject,deactivate_subject
+from app.schemas.student import AdmissionCreate,StudentProfileResponse,StudentListResponse
+from app.services.student_service import create_admission,get_student_by_id,search_students
 
 
 api_router = APIRouter()
@@ -97,5 +99,80 @@ def deactivate_subject_endpoint(subject_id: int,db: Session = Depends(get_db),cu
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,detail="Could not deactivate subject.",)
+
+#student
+
+@api_router.post("/students/admissions",response_model=StudentProfileResponse,status_code=status.HTTP_201_CREATED,)
+def admit_student(admission: AdmissionCreate,db: Session = Depends(get_db),current_user: User = Depends(get_current_user)):
+    try:
+        student = create_admission(db, admission)
+        db.commit()
+        profile = get_student_by_id(db, student.id)
+        if profile is None:
+            raise HTTPException(status_code=500,detail="Admission was saved, but the student profile could not be loaded.",)
+        return profile
+
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404,detail=str(exc),)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException( status_code=422,detail=str(exc),)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409,detail=("Admission conflicts with an existing database record. ""Check whether this student is already enrolled in this session."),)
+    except Exception:
+        db.rollback()
+        raise
+
+
+@api_router.get("/students",response_model=StudentListResponse,)
+def list_students(
+    search: str | None = Query(default=None, max_length=150),
+    class_number: int | None = Query(default=None, ge=9, le=12),
+    stream: str | None = Query(default=None),
+    academic_session_id: int | None = Query(default=None, gt=0),
+    enrollment_status: str | None = Query(default=None),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if stream not in (None, "Science", "Commerce"):
+        raise HTTPException(status_code=422,detail="Stream must be Science or Commerce.",)
+
+    if enrollment_status not in (None, "active", "inactive", "cancelled"):
+        raise HTTPException( status_code=422,detail="Invalid enrolment status.",)
+
+    students, total = search_students(
+        db=db,
+        search=search,
+        class_number=class_number,
+        stream=stream,
+        academic_session_id=academic_session_id,
+        status=enrollment_status,
+        skip=skip,
+        limit=limit,
+    )
+
+    return {
+        "total": total,
+        "items": students,
+    }
+
+
+@api_router.get("/students/{student_id}",response_model=StudentProfileResponse,)
+def student_profile(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    student = get_student_by_id(db, student_id)
+
+    if student is None:
+        raise HTTPException(status_code=404,detail="Student not found.",)
+
+    return student
+
 
 
