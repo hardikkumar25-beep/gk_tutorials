@@ -24,4 +24,4 @@ class Student(Base):
     status: Mapped[str] = mapped_column(String(30), default="active")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    enrollments: Mapped[list["StudentEnrollment"]] = relationship(back_populates="student", cascade="all, delete-orphan")
+    enrollments: Mapped[list["StudentEnrollment"]] = relationship(back_populates="student")

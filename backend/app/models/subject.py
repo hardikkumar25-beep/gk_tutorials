@@ -24,7 +24,7 @@ class Subject(Base):
     stream: Mapped[str | None] = mapped_column(String(30), nullable=True)
     is_active: Mapped[bool]=mapped_column(Boolean,default=True)
 
-    __table_args__ = (CheckConstraint("class_number IN (9, 10, 11, 12)",name="ck_enrollment_valid_class",),
+    __table_args__ = (CheckConstraint("class_number IN (9, 10, 11, 12)",name="ck_subject_valid_class",),
                           CheckConstraint("""
                             (
                                 class_number IN (9, 10)
@@ -35,7 +35,7 @@ class Subject(Base):
                                 class_number IN (11, 12)
                                 AND stream IN ('Science', 'Commerce')
                             )""",
-                            name="ck_enrollment_valid_stream",),
+                            name="ck_subject_valid_stream",),
                             UniqueConstraint("subject_name", "class_number","stream",name="uq_subject_class_stream",postgresql_nulls_not_distinct=True,),)
 
     enrollments: Mapped[list["StudentEnrollment"]] = relationship(secondary=enrollment_subjects,back_populates="subjects")
