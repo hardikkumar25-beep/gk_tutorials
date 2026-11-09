@@ -5,6 +5,7 @@ from app.models.student_enrollment import StudentEnrollment
 from app.models.subject import Subject
 from app.models.teacher import Teacher
 from app.models.batch import Batch,BatchSchedule,BatchSubject
+from app.models.online_class import OnlineClass
 
 __all__ = [
     "User",
@@ -15,5 +16,6 @@ __all__ = [
     "Teacher",
     "Batch",
     "BatchSchedule",
-    "BatchSubject"
+    "BatchSubject",
+    "OnlineClass",
 ]
