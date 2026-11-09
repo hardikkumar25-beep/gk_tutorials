@@ -13,6 +13,8 @@ from app.schemas.subject import SubjectResponse,SubjectCreate,SubjectUpdate
 from app.services.subject_service import create_subject,get_subjects,get_subject_by_id,update_subject,deactivate_subject
 from app.schemas.student import AdmissionCreate,StudentProfileResponse,StudentListResponse,StudentUpdate
 from app.services.student_service import create_admission,get_student_by_id,search_students,update_student,deactivate_student
+from app.services.academic_session_service import get_current_academic_session
+from app.schemas.academic_session import AcademicSessionResponse
 
 
 api_router = APIRouter()
@@ -217,3 +219,11 @@ def deactivate_student_endpoint(student_id: int,db: Session = Depends(get_db),cu
         raise
 
 
+# Academic Sessions
+
+@api_router.get("/academic-sessions/current",response_model=AcademicSessionResponse,)
+def get_current_session_endpoint(db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
+    session = get_current_academic_session(db)
+    if session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="No current academic session found.",)
+    return session
