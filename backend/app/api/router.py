@@ -15,6 +15,10 @@ from app.schemas.student import AdmissionCreate,StudentProfileResponse,StudentLi
 from app.services.student_service import create_admission,get_student_by_id,search_students,update_student,deactivate_student,cancel_student_enrollment
 from app.services.academic_session_service import get_current_academic_session
 from app.schemas.academic_session import AcademicSessionResponse
+from app.schemas.teacher import TeacherCreate,TeacherUpdate,TeacherResponse
+from app.schemas.batch import BatchCreate,BatchUpdate,BatchResponse
+from app.services.teacher_service import create_teacher,get_teachers,update_teacher,deactivate_teacher
+from app.services.batch_service import create_batch,get_batches,get_batch_by_id,update_batch,deactivate_batch
 
 
 
@@ -252,3 +256,167 @@ def get_current_session_endpoint(db: Session = Depends(get_db),current_user: Use
     if session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="No current academic session found.",)
     return session
+
+# TEACHERS
+
+@api_router.post("/teachers",response_model=TeacherResponse,status_code=status.HTTP_201_CREATED,)
+def create_teacher_endpoint(payload: TeacherCreate,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
+    try:
+        teacher = create_teacher(db, payload)
+        db.commit()
+        db.refresh(teacher)
+        return teacher
+
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc))
+
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Could not create teacher because of a database conflict.",
+        )
+
+
+@api_router.get("/teachers",response_model=list[TeacherResponse],)
+def list_teachers_endpoint(is_active: bool | None = True,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
+    return get_teachers(db, is_active)
+
+
+@api_router.patch("/teachers/{teacher_id}",response_model=TeacherResponse,)
+def update_teacher_endpoint(teacher_id: int,payload: TeacherUpdate,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
+    try:
+        teacher = update_teacher(db, teacher_id, payload)
+        db.commit()
+        db.refresh(teacher)
+        return teacher
+
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc))
+
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc))
+
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Could not update teacher.",
+        )
+
+
+@api_router.patch("/teachers/{teacher_id}/deactivate",response_model=TeacherResponse,)
+def deactivate_teacher_endpoint(teacher_id: int,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
+    try:
+        teacher = deactivate_teacher(db, teacher_id)
+        db.commit()
+        db.refresh(teacher)
+        return teacher
+
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc))
+
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc))
+
+# BATCHES
+
+@api_router.post("/batches",response_model=BatchResponse,status_code=status.HTTP_201_CREATED,)
+def create_batch_endpoint(payload: BatchCreate,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
+    try:
+        batch = create_batch(db, payload)
+        db.commit()
+
+        result = get_batch_by_id(db, batch.id)
+
+        return result
+
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc))
+
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409,detail="Batch conflicts with an existing database record.",)
+
+
+@api_router.get("/batches",response_model=list[BatchResponse],)
+def list_batches_endpoint(
+    class_number: int | None = Query(default=None, ge=9, le=12),
+    stream: Literal["Science", "Commerce"] | None = None,
+    academic_session_id: int | None = Query(default=None, gt=0),
+    teacher_id: int | None = Query(default=None, gt=0),
+    is_active: bool | None = True,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if class_number in (9, 10) and stream is not None:
+        raise HTTPException(
+            status_code=422,
+            detail="Classes 9 and 10 cannot have a stream.",
+        )
+
+    return get_batches(
+        db=db,
+        class_number=class_number,
+        stream=stream,
+        academic_session_id=academic_session_id,
+        teacher_id=teacher_id,
+        is_active=is_active,
+    )
+
+
+@api_router.get("/batches/{batch_id}",response_model=BatchResponse,)
+def batch_details_endpoint(batch_id: int,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
+    batch = get_batch_by_id(db, batch_id)
+
+    if batch is None:
+        raise HTTPException(status_code=404,detail="Batch not found.",)
+
+    return batch
+
+
+@api_router.patch("/batches/{batch_id}",response_model=BatchResponse,)
+def update_batch_endpoint(batch_id: int,payload: BatchUpdate,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
+    try:
+        batch = update_batch(db, batch_id, payload)
+        db.commit()
+
+        return get_batch_by_id(db, batch.id)
+
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc))
+
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409,detail="Could not update batch because of a database conflict.",)
+
+@api_router.patch("/batches/{batch_id}/deactivate",response_model=BatchResponse,)
+def deactivate_batch_endpoint(batch_id: int,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
+    try:
+        batch = deactivate_batch(db, batch_id)
+        db.commit()
+
+        return get_batch_by_id(db, batch.id)
+
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc))
+
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc))
