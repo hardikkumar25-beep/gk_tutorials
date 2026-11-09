@@ -205,13 +205,22 @@ export default function Students() {
               </p>
             </div>
 
+            <div className="student-heading-actions">
             <Link
-              className="button button-outline"
-              to="/admin"
+                className="button button-outline"
+                to="/admin"
             >
-              <ArrowLeft size={15} />
-              Dashboard
+                <ArrowLeft size={15} />
+                Dashboard
             </Link>
+
+            <Link
+                className="button button-primary"
+                to="/admin/admissions/new"
+            >
+                + Add Student
+            </Link>
+            </div>
 
           </div>
 
