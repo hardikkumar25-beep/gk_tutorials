@@ -21,6 +21,8 @@ from app.services.teacher_service import create_teacher,get_teachers,update_teac
 from app.services.batch_service import create_batch,get_batches,get_batch_by_id,update_batch,deactivate_batch
 from app.schemas.online_class import OnlineClassUpdate,OnlineClassResponse
 from app.services.online_class_service import get_online_class,get_public_online_class,update_online_class
+from app.schemas.dashboard import DashboardSummary
+from app.services.dashboard_service import get_dashboard_summary
 
 api_router = APIRouter()
 
@@ -441,3 +443,8 @@ def update_online_class_endpoint(payload: OnlineClassUpdate,db: Session = Depend
 @api_router.get("/public/online-class",response_model=OnlineClassResponse | None,)
 def get_public_online_class_endpoint(db: Session = Depends(get_db),):
     return get_public_online_class(db)
+
+# ADMIN: Dashboard summary
+@api_router.get("/dashboard/summary",response_model=DashboardSummary,)
+def dashboard_summary_endpoint(db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
+    return get_dashboard_summary(db)
