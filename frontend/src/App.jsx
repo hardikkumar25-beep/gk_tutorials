@@ -8,6 +8,7 @@ import Students from "./pages/admin/Students";
 import StudentProfile from "./pages/admin/StudentProfile";
 import AdmissionForm from "./pages/admin/AdmissionForm";
 import Teachers from "./pages/admin/Teachers";
+import Batches from "./pages/admin/Batches";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -66,7 +67,15 @@ function AppRoutes() {
             <Teachers />
           </ProtectedRoute>
         }
-/>
+      />
+      <Route
+        path="/admin/batches"
+        element={
+          <ProtectedRoute>
+            <Batches />
+          </ProtectedRoute>
+        }
+      />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

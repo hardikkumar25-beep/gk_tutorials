@@ -20,8 +20,7 @@ export default function Dashboard() {
         <a className="side-link"><ClipboardList size={18} /> Enquiries</a>
         <Link className="side-link" to="/admin/students"><Users size={18} />Students</Link>
         <Link className="side-link" to="/admin/teachers"><UserRound size={18} />Teachers</Link>
-        <a className="side-link"><BookOpen size={18} />Batches</a>
-        <a className="side-link"><BookOpen size={18} /> Batches</a>
+        <Link className="side-link" to="/admin/batches"><BookOpen size={18} />Batches</Link>
         <a className="side-link"><IndianRupee size={18} /> Fees & payments</a>
         <a className="side-link"><CalendarCheck size={18} /> Attendance</a>
         <a className="side-link"><ClipboardList size={18} /> Tests & marks</a>

@@ -10,6 +10,7 @@ import {
   Ban,
   LogOut,
   RefreshCw,
+  BookOpen,
 } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
@@ -196,6 +197,10 @@ export default function Teachers() {
         <Link className="side-link active" to="/admin/teachers">
           <Users size={18} />
           Teachers
+        </Link>
+        <Link className="side-link" to="/admin/batches">
+          <BookOpen size={18} />
+          Batches
         </Link>
 
         <div className="sidebar-bottom">

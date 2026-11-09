@@ -285,7 +285,8 @@ def update_batch(
     if not batch.is_active:
         raise ValueError("Cannot update an inactive batch.")
 
-    updates = data.model_dump(exclude_unset=True)
+    updates = data.model_dump(exclude_unset=True,exclude={"batch_subjects"})
+    new_subject_data = (data.batch_subjects if "batch_subjects" in data.model_fields_set else None)
 
     new_class = updates.get("class_number", batch.class_number)
     new_stream = updates.get("stream", batch.stream)
