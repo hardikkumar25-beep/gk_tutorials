@@ -18,16 +18,19 @@ function ProtectedRoute({ children }) {
     return <div className="screen-message">Loading...</div>;
   }
 
-  return user ? children : <Navigate to="/admin/login" replace />;
+  return user ? children : <Navigate to="/staff-portal" replace />;
 }
 
 function AppRoutes() {
   return (
     <Routes>
+      {/* Public website */}
       <Route path="/" element={<PublicHome />} />
 
-      <Route path="/admin/login" element={<Login />} />
+      {/* Separate staff login address */}
+      <Route path="/staff-portal" element={<Login />} />
 
+      {/* Protected admin pages */}
       <Route
         path="/admin"
         element={
@@ -45,6 +48,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/admin/students/:studentId"
         element={
@@ -53,6 +57,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/admin/admissions/new"
         element={
@@ -61,6 +66,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/admin/teachers"
         element={
@@ -69,6 +75,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/admin/batches"
         element={
@@ -77,6 +84,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/admin/online-class"
         element={
