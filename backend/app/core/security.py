@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import secrets
 import jwt
 from pwdlib import PasswordHash
 from app.core.config import settings
@@ -19,7 +20,7 @@ def create_access_token(subject: str) -> str:
     expires = datetime.now(timezone.utc) + timedelta(
         minutes=settings.access_token_expire_minutes
     )
-    payload = {"sub": subject, "exp": expires, "type": "access"}
+    payload = {"sub": subject, "exp": expires, "type": "access", "jti": secrets.token_urlsafe(16)}
     return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)
 
 
