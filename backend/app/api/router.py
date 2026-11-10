@@ -1,13 +1,21 @@
+from datetime import datetime, timedelta, timezone
+from hashlib import sha256
+import hmac
+import secrets
+import uuid
 from typing import Literal
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import get_current_user
+from app.core.config import settings
 from app.core.security import create_access_token, verify_password
 from app.db.session import get_db
 from app.models.user import User
+from app.models.refresh_token import RefreshToken
 from app.schemas.auth import LoginRequest, TokenResponse, UserResponse
 from app.schemas.subject import SubjectResponse,SubjectCreate,SubjectUpdate
 from app.services.subject_service import create_subject,get_subjects,get_subject_by_id,update_subject,deactivate_subject
@@ -26,15 +34,225 @@ from app.services.dashboard_service import get_dashboard_summary
 
 api_router = APIRouter()
 
-#Auth
+# Authentication
+REFRESH_COOKIE = "gkt_refresh_token"
+
+
+def _hash_refresh_token(token: str) -> str:
+    return sha256(token.encode("utf-8")).hexdigest()
+
+
+def _csrf_for_refresh_token(raw_token: str) -> str:
+    return hmac.new(
+        settings.secret_key.encode("utf-8"),
+        f"gkt-csrf:{raw_token}".encode("utf-8"),
+        "sha256",
+    ).hexdigest()
+
+
+def _set_auth_cookie(response: Response, refresh_token: str) -> None:
+    response.headers["Cache-Control"] = "no-store"
+    response.set_cookie(
+        REFRESH_COOKIE,
+        refresh_token,
+        httponly=True,
+        secure=settings.auth_cookie_secure,
+        samesite=settings.auth_cookie_samesite,
+        max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
+        path="/api/v1/auth",
+    )
+
+
+def _clear_auth_cookie(response: Response) -> None:
+    response.headers["Cache-Control"] = "no-store"
+    response.delete_cookie(
+        REFRESH_COOKIE,
+        path="/api/v1/auth",
+        secure=settings.auth_cookie_secure,
+        httponly=True,
+        samesite=settings.auth_cookie_samesite,
+    )
+
+
+def _require_csrf(request: Request, raw_token: str) -> None:
+    csrf_header = request.headers.get("X-CSRF-Token")
+    origin = request.headers.get("origin")
+    expected = _csrf_for_refresh_token(raw_token)
+    if (
+        not csrf_header
+        or not hmac.compare_digest(expected, csrf_header)
+        or (origin and origin not in settings.cors_origins)
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF validation failed")
+
+
+def _new_refresh_session(db: Session, user_id: int, family_id: str | None = None) -> str:
+    raw_token = secrets.token_urlsafe(48)
+    db.add(
+        RefreshToken(
+            user_id=user_id,
+            token_hash=_hash_refresh_token(raw_token),
+            family_id=family_id or str(uuid.uuid4()),
+            expires_at=datetime.now(timezone.utc)
+            + timedelta(days=settings.refresh_token_expire_days),
+        )
+    )
+    return raw_token
+
+
 @api_router.post("/auth/login", response_model=TokenResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)):
+def login(
+    payload: LoginRequest,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    origin = request.headers.get("origin")
+    if origin and origin not in settings.cors_origins:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Untrusted request origin")
     user = db.scalar(select(User).where(User.email == payload.email.lower()))
     if user is None or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account is inactive")
-    return TokenResponse(access_token=create_access_token(str(user.id)))
+
+    refresh_token = _new_refresh_session(db, user.id)
+    db.commit()
+    _set_auth_cookie(response, refresh_token)
+    return TokenResponse(
+        access_token=create_access_token(str(user.id)),
+        csrf_token=_csrf_for_refresh_token(refresh_token),
+    )
+
+
+@api_router.get("/auth/csrf")
+def get_csrf_token(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    response.headers["Cache-Control"] = "no-store"
+    origin = request.headers.get("origin")
+    if origin and origin not in settings.cors_origins:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Untrusted request origin")
+    raw_token = request.cookies.get(REFRESH_COOKIE)
+    if not raw_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh session is missing")
+
+    stored = db.scalar(
+        select(RefreshToken).where(RefreshToken.token_hash == _hash_refresh_token(raw_token))
+    )
+    if stored is None or stored.revoked_at is not None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh session is invalid")
+
+    expires_at = stored.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at <= datetime.now(timezone.utc):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh session has expired")
+
+    user = db.get(User, stored.user_id)
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account is unavailable")
+
+    return {"csrf_token": _csrf_for_refresh_token(raw_token)}
+
+
+@api_router.post("/auth/refresh", response_model=TokenResponse)
+def refresh_session(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    raw_token = request.cookies.get(REFRESH_COOKIE)
+    if not raw_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh session is missing")
+    _require_csrf(request, raw_token)
+
+    token_hash = _hash_refresh_token(raw_token)
+    stored = db.scalar(
+        select(RefreshToken)
+        .where(RefreshToken.token_hash == token_hash)
+        .with_for_update()
+    )
+    if stored is None:
+        _clear_auth_cookie(response)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh session is invalid")
+
+    now = datetime.now(timezone.utc)
+    expires_at = stored.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    if stored.revoked_at is not None:
+        db.execute(
+            update(RefreshToken)
+            .where(RefreshToken.family_id == stored.family_id)
+            .values(revoked_at=now)
+        )
+        db.commit()
+        _clear_auth_cookie(response)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token reuse detected; sign in again")
+
+    if expires_at <= now:
+        stored.revoked_at = now
+        db.commit()
+        _clear_auth_cookie(response)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh session has expired")
+
+    user = db.get(User, stored.user_id)
+    if user is None or not user.is_active:
+        db.execute(
+            update(RefreshToken)
+            .where(RefreshToken.family_id == stored.family_id)
+            .values(revoked_at=now)
+        )
+        db.commit()
+        _clear_auth_cookie(response)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account is unavailable")
+
+    new_raw_token = secrets.token_urlsafe(48)
+    new_hash = _hash_refresh_token(new_raw_token)
+    stored.revoked_at = now
+    stored.replaced_by_token_hash = new_hash
+    db.add(
+        RefreshToken(
+            user_id=user.id,
+            token_hash=new_hash,
+            family_id=stored.family_id,
+            expires_at=now + timedelta(days=settings.refresh_token_expire_days),
+        )
+    )
+    db.commit()
+
+    _set_auth_cookie(response, new_raw_token)
+    return TokenResponse(
+        access_token=create_access_token(str(user.id)),
+        csrf_token=_csrf_for_refresh_token(new_raw_token),
+    )
+
+
+@api_router.post("/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    raw_token = request.cookies.get(REFRESH_COOKIE)
+    if raw_token:
+        _require_csrf(request, raw_token)
+        stored = db.scalar(
+            select(RefreshToken).where(RefreshToken.token_hash == _hash_refresh_token(raw_token))
+        )
+        if stored is not None:
+            now = datetime.now(timezone.utc)
+            db.execute(
+                update(RefreshToken)
+                .where(RefreshToken.family_id == stored.family_id)
+                .values(revoked_at=now)
+            )
+            db.commit()
+    _clear_auth_cookie(response)
 
 
 @api_router.get("/auth/me", response_model=UserResponse)

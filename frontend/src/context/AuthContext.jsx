@@ -1,5 +1,9 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import api from "../services/api";
+import api, {
+  clearAccessToken,
+  refreshAccessToken,
+  setAccessToken,
+} from "../services/api";
 
 const AuthContext = createContext(null);
 
@@ -8,27 +12,53 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("gkt_access_token");
-    if (!token) {
-      setLoading(false);
-      return;
+    let active = true;
+
+    async function restoreSession() {
+      try {
+        await refreshAccessToken();
+        const profile = await api.get("/auth/me");
+        if (active) setUser(profile.data);
+      } catch {
+        clearAccessToken();
+        if (active) setUser(null);
+      } finally {
+        if (active) setLoading(false);
+      }
     }
-    api.get("/auth/me")
-      .then((response) => setUser(response.data))
-      .catch(() => localStorage.removeItem("gkt_access_token"))
-      .finally(() => setLoading(false));
+
+    restoreSession();
+
+    function handleSessionExpired() {
+      setUser(null);
+    }
+    window.addEventListener("gkt:session-expired", handleSessionExpired);
+
+    return () => {
+      active = false;
+      window.removeEventListener("gkt:session-expired", handleSessionExpired);
+    };
   }, []);
 
   async function login(email, password) {
     const response = await api.post("/auth/login", { email, password });
-    localStorage.setItem("gkt_access_token", response.data.access_token);
+    setAccessToken(response.data.access_token);
     const profile = await api.get("/auth/me");
     setUser(profile.data);
   }
 
-  function logout() {
-    localStorage.removeItem("gkt_access_token");
-    setUser(null);
+  async function logout() {
+    try {
+      const { data } = await api.get("/auth/csrf");
+      await api.post(
+        "/auth/logout",
+        null,
+        { headers: { "X-CSRF-Token": data.csrf_token } }
+      );
+    } finally {
+      clearAccessToken();
+      setUser(null);
+    }
   }
 
   return (
