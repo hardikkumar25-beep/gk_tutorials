@@ -5,7 +5,10 @@ class Settings(BaseSettings):
     app_name: str = "G.K. Tutorials API"
     database_url: str
     secret_key: str
-    access_token_expire_minutes: int = 480
+    access_token_expire_minutes: int = 15
+    refresh_token_expire_days: int = 7
+    auth_cookie_secure: bool = False
+    auth_cookie_samesite: str = "lax"
     admin_name: str = "Institute Admin"
     admin_email: str
     admin_password: str
