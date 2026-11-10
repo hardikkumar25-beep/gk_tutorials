@@ -36,7 +36,6 @@ api_router = APIRouter()
 
 # Authentication
 REFRESH_COOKIE = "gkt_refresh_token"
-CSRF_COOKIE = "gkt_csrf_token"
 
 
 def _hash_refresh_token(token: str) -> str:
@@ -65,6 +64,7 @@ def _set_auth_cookie(response: Response, refresh_token: str) -> None:
 
 
 def _clear_auth_cookie(response: Response) -> None:
+    response.headers["Cache-Control"] = "no-store"
     response.delete_cookie(
         REFRESH_COOKIE,
         path="/api/v1/auth",
