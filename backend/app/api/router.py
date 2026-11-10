@@ -113,9 +113,13 @@ def _new_refresh_session(db: Session, user_id: int, family_id: str | None = None
 @api_router.post("/auth/login", response_model=TokenResponse)
 def login(
     payload: LoginRequest,
+    request: Request,
     response: Response,
     db: Session = Depends(get_db),
 ):
+    origin = request.headers.get("origin")
+    if origin and origin not in settings.cors_origins:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Untrusted request origin")
     user = db.scalar(select(User).where(User.email == payload.email.lower()))
     if user is None or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
