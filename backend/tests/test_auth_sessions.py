@@ -33,6 +33,7 @@ def test_refresh_rotation_reuse_detection_and_logout():
     )
     db.add(user)
     db.commit()
+    user_id = user.id
     db.close()
 
     def override_get_db():
@@ -60,7 +61,7 @@ def test_refresh_rotation_reuse_detection_and_logout():
             check = TestingSession()
             stored = check.scalar(
                 select(RefreshToken).where(
-                    RefreshToken.user_id == user.id
+                    RefreshToken.user_id == user_id
                 )
             )
             assert stored is not None
@@ -87,6 +88,7 @@ def test_refresh_rotation_reuse_detection_and_logout():
             assert replay.status_code == 401
 
             client.cookies.set("gkt_refresh_token", new_refresh, path="/api/v1/auth")
+            client.cookies.set("gkt_csrf_token", new_csrf, path="/")
             still_revoked = client.post(
                 "/api/v1/auth/refresh",
                 headers={"X-CSRF-Token": new_csrf},
