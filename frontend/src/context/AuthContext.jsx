@@ -1,5 +1,9 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import api, { refreshAccessToken } from "../services/api";
+import api, {
+  clearAccessToken,
+  refreshAccessToken,
+  setAccessToken,
+} from "../services/api";
 
 const AuthContext = createContext(null);
 
@@ -16,7 +20,7 @@ export function AuthProvider({ children }) {
         const profile = await api.get("/auth/me");
         if (active) setUser(profile.data);
       } catch {
-        localStorage.removeItem("gkt_access_token");
+        clearAccessToken();
         if (active) setUser(null);
       } finally {
         if (active) setLoading(false);
@@ -38,7 +42,7 @@ export function AuthProvider({ children }) {
 
   async function login(email, password) {
     const response = await api.post("/auth/login", { email, password });
-    localStorage.setItem("gkt_access_token", response.data.access_token);
+    setAccessToken(response.data.access_token);
     const profile = await api.get("/auth/me");
     setUser(profile.data);
   }
@@ -52,7 +56,7 @@ export function AuthProvider({ children }) {
         { headers: { "X-CSRF-Token": data.csrf_token } }
       );
     } finally {
-      localStorage.removeItem("gkt_access_token");
+      clearAccessToken();
       setUser(null);
     }
   }
