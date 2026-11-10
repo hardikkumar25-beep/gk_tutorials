@@ -1,0 +1,41 @@
+name: Authentication and frontend checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, "feature/refresh-token-auth"]
+
+jobs:
+  auth-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: sqlite:///./ci.db
+      SECRET_KEY: ci-only-secret-key-not-for-production
+      ADMIN_EMAIL: ci-admin@example.com
+      ADMIN_PASSWORD: ci-only-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+      - run: pytest -q tests/test_auth_sessions.py
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
