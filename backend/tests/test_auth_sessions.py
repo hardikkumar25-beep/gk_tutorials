@@ -55,7 +55,7 @@ def test_refresh_rotation_reuse_detection_and_logout():
             assert "httponly" in login.headers.get("set-cookie", "").lower()
 
             old_refresh = client.cookies.get("gkt_refresh_token")
-            csrf = client.cookies.get("gkt_csrf_token")
+            csrf = login.json()["csrf_token"]
             assert old_refresh and csrf
 
             check = TestingSession()
@@ -75,7 +75,7 @@ def test_refresh_rotation_reuse_detection_and_logout():
             assert refreshed.status_code == 200
             assert refreshed.json()["access_token"] != login.json()["access_token"]
             new_refresh = client.cookies.get("gkt_refresh_token")
-            new_csrf = client.cookies.get("gkt_csrf_token")
+            new_csrf = refreshed.json()["csrf_token"]
             assert new_refresh and new_refresh != old_refresh
             assert new_csrf and new_csrf != csrf
 
@@ -83,12 +83,11 @@ def test_refresh_rotation_reuse_detection_and_logout():
             client.cookies.set("gkt_refresh_token", old_refresh, path="/api/v1/auth")
             replay = client.post(
                 "/api/v1/auth/refresh",
-                headers={"X-CSRF-Token": new_csrf},
+                headers={"X-CSRF-Token": csrf},
             )
             assert replay.status_code == 401
 
             client.cookies.set("gkt_refresh_token", new_refresh, path="/api/v1/auth")
-            client.cookies.set("gkt_csrf_token", new_csrf, path="/")
             still_revoked = client.post(
                 "/api/v1/auth/refresh",
                 headers={"X-CSRF-Token": new_csrf},
@@ -101,7 +100,7 @@ def test_refresh_rotation_reuse_detection_and_logout():
                 json={"email": "auth-test@example.com", "password": "test-password"},
             )
             assert second_login.status_code == 200
-            logout_csrf = client.cookies.get("gkt_csrf_token")
+            logout_csrf = second_login.json()["csrf_token"]
             logout_refresh = client.cookies.get("gkt_refresh_token")
             check = TestingSession()
             logout_hash = sha256(logout_refresh.encode("utf-8")).hexdigest()
