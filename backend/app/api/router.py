@@ -127,8 +127,10 @@ def login(
 @api_router.get("/auth/csrf")
 def get_csrf_token(
     request: Request,
+    response: Response,
     db: Session = Depends(get_db),
 ):
+    response.headers["Cache-Control"] = "no-store"
     origin = request.headers.get("origin")
     if origin and origin not in settings.cors_origins:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Untrusted request origin")
