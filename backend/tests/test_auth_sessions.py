@@ -90,14 +90,14 @@ def test_refresh_rotation_reuse_detection_and_logout():
             assert new_csrf and new_csrf != csrf
 
             # Replaying a rotated token must revoke the complete token family.
-            client.cookies.set("gkt_refresh_token", old_refresh, path="/api/v1/auth")
+            client.cookies.set("gkt_refresh_token", old_refresh, domain="testserver.local", path="/api/v1/auth")
             replay = client.post(
                 "/api/v1/auth/refresh",
                 headers={"X-CSRF-Token": csrf},
             )
             assert replay.status_code == 401
 
-            client.cookies.set("gkt_refresh_token", new_refresh, path="/api/v1/auth")
+            client.cookies.set("gkt_refresh_token", new_refresh, domain="testserver.local", path="/api/v1/auth")
             still_revoked = client.post(
                 "/api/v1/auth/refresh",
                 headers={"X-CSRF-Token": new_csrf},
