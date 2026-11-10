@@ -7,25 +7,19 @@ const api = axios.create({
 
 let refreshPromise = null;
 
-function readCookie(name) {
-  const prefix = `${name}=`;
-  const entry = document.cookie
-    .split("; ")
-    .find((cookie) => cookie.startsWith(prefix));
-  return entry ? decodeURIComponent(entry.slice(prefix.length)) : null;
-}
-
 export function refreshAccessToken() {
   if (!refreshPromise) {
-    const csrfToken = readCookie("gkt_csrf_token");
     refreshPromise = axios
-      .post(
-        `${api.defaults.baseURL}/auth/refresh`,
-        null,
-        {
-          withCredentials: true,
-          headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {},
-        }
+      .get(`${api.defaults.baseURL}/auth/csrf`, { withCredentials: true })
+      .then(({ data }) =>
+        axios.post(
+          `${api.defaults.baseURL}/auth/refresh`,
+          null,
+          {
+            withCredentials: true,
+            headers: { "X-CSRF-Token": data.csrf_token },
+          }
+        )
       )
       .then(({ data }) => {
         localStorage.setItem("gkt_access_token", data.access_token);
@@ -59,6 +53,7 @@ api.interceptors.response.use(
     const requestUrl = originalRequest?.url || "";
     const isAuthRequest = [
       "/auth/login",
+      "/auth/csrf",
       "/auth/refresh",
       "/auth/logout",
     ].some((path) => requestUrl.includes(path));
