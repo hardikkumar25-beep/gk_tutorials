@@ -3,14 +3,6 @@ import api, { refreshAccessToken } from "../services/api";
 
 const AuthContext = createContext(null);
 
-function readCookie(name) {
-  const prefix = `${name}=`;
-  const entry = document.cookie
-    .split("; ")
-    .find((cookie) => cookie.startsWith(prefix));
-  return entry ? decodeURIComponent(entry.slice(prefix.length)) : null;
-}
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -53,11 +45,11 @@ export function AuthProvider({ children }) {
 
   async function logout() {
     try {
-      const csrfToken = readCookie("gkt_csrf_token");
+      const { data } = await api.get("/auth/csrf");
       await api.post(
         "/auth/logout",
         null,
-        { headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {} }
+        { headers: { "X-CSRF-Token": data.csrf_token } }
       );
     } finally {
       localStorage.removeItem("gkt_access_token");
