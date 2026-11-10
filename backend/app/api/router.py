@@ -37,6 +37,14 @@ api_router = APIRouter()
 # Authentication
 REFRESH_COOKIE = "gkt_refresh_token"
 
+def _require_trusted_origin(request: Request) -> None:
+    origin = request.headers.get("origin")
+    if not origin or origin not in settings.cors_origins:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Untrusted or missing request origin",
+        )
+
 
 def _hash_refresh_token(token: str) -> str:
     return sha256(token.encode("utf-8")).hexdigest()
@@ -78,12 +86,17 @@ def _require_csrf(request: Request, raw_token: str) -> None:
     csrf_header = request.headers.get("X-CSRF-Token")
     origin = request.headers.get("origin")
     expected = _csrf_for_refresh_token(raw_token)
+
     if (
-        not csrf_header
+        not origin
+        or origin not in settings.cors_origins
+        or not csrf_header
         or not hmac.compare_digest(expected, csrf_header)
-        or (origin and origin not in settings.cors_origins)
     ):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF validation failed")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="CSRF validation failed",
+        )
 
 
 def _new_refresh_session(db: Session, user_id: int, family_id: str | None = None) -> str:
@@ -107,9 +120,7 @@ def login(
     response: Response,
     db: Session = Depends(get_db),
 ):
-    origin = request.headers.get("origin")
-    if origin and origin not in settings.cors_origins:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Untrusted request origin")
+    _require_trusted_origin(request)
     user = db.scalar(select(User).where(User.email == payload.email.lower()))
     if user is None or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
