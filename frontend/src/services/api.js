@@ -5,7 +5,17 @@ const api = axios.create({
   withCredentials: true,
 });
 
+// Access tokens stay in memory; the HttpOnly refresh cookie survives reloads.
+let accessToken = null;
 let refreshPromise = null;
+
+export function setAccessToken(token) {
+  accessToken = token;
+}
+
+export function clearAccessToken() {
+  accessToken = null;
+}
 
 export function refreshAccessToken() {
   if (!refreshPromise) {
@@ -22,11 +32,11 @@ export function refreshAccessToken() {
         )
       )
       .then(({ data }) => {
-        localStorage.setItem("gkt_access_token", data.access_token);
+        setAccessToken(data.access_token);
         return data.access_token;
       })
       .catch((error) => {
-        localStorage.removeItem("gkt_access_token");
+        clearAccessToken();
         throw error;
       })
       .finally(() => {
@@ -38,10 +48,9 @@ export function refreshAccessToken() {
 }
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("gkt_access_token");
-  if (token) {
+  if (accessToken) {
     config.headers = config.headers || {};
-    config.headers.Authorization = `Bearer ${token}`;
+    config.headers.Authorization = `Bearer ${accessToken}`;
   }
   return config;
 });
@@ -74,7 +83,7 @@ api.interceptors.response.use(
       originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
       return api(originalRequest);
     } catch (refreshError) {
-      localStorage.removeItem("gkt_access_token");
+      clearAccessToken();
       window.dispatchEvent(new Event("gkt:session-expired"));
       return Promise.reject(refreshError);
     }
