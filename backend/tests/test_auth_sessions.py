@@ -1,3 +1,5 @@
+from hashlib import sha256
+
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -99,6 +101,15 @@ def test_refresh_rotation_reuse_detection_and_logout():
             assert second_login.status_code == 200
             logout_csrf = client.cookies.get("gkt_csrf_token")
             logout_refresh = client.cookies.get("gkt_refresh_token")
+            check = TestingSession()
+            logout_hash = sha256(logout_refresh.encode("utf-8")).hexdigest()
+            logout_family = check.scalar(
+                select(RefreshToken.family_id).where(
+                    RefreshToken.token_hash == logout_hash
+                )
+            )
+            check.close()
+
             logout = client.post(
                 "/api/v1/auth/logout",
                 headers={"X-CSRF-Token": logout_csrf},
@@ -106,23 +117,13 @@ def test_refresh_rotation_reuse_detection_and_logout():
             assert logout.status_code == 204
 
             check = TestingSession()
-            logged_out_token = check.scalar(
+            family_tokens = check.scalars(
                 select(RefreshToken).where(
-                    RefreshToken.token_hash.is_not(None),
-                    RefreshToken.user_id == user.id,
-                    RefreshToken.family_id == (
-                        check.scalar(
-                            select(RefreshToken.family_id).where(
-                                RefreshToken.token_hash == __import__("hashlib").sha256(
-                                    logout_refresh.encode("utf-8")
-                                ).hexdigest()
-                            )
-                        )
-                    ),
+                    RefreshToken.family_id == logout_family
                 )
-            )
-            assert logged_out_token is not None
-            assert logged_out_token.revoked_at is not None
+            ).all()
+            assert family_tokens
+            assert all(token.revoked_at is not None for token in family_tokens)
             check.close()
     finally:
         app.dependency_overrides.pop(get_db, None)
