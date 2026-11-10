@@ -19,9 +19,12 @@ def create_access_token(subject: str) -> str:
     expires = datetime.now(timezone.utc) + timedelta(
         minutes=settings.access_token_expire_minutes
     )
-    payload = {"sub": subject, "exp": expires}
+    payload = {"sub": subject, "exp": expires, "type": "access"}
     return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)
 
 
 def decode_access_token(token: str) -> dict:
-    return jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
+    payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
+    if payload.get("type") != "access":
+        raise jwt.InvalidTokenError("Invalid token type")
+    return payload
