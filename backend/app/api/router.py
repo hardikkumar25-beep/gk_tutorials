@@ -52,6 +52,7 @@ def _csrf_for_refresh_token(raw_token: str) -> str:
 
 
 def _set_auth_cookie(response: Response, refresh_token: str) -> None:
+    response.headers["Cache-Control"] = "no-store"
     response.set_cookie(
         REFRESH_COOKIE,
         refresh_token,
