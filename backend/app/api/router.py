@@ -47,20 +47,21 @@ def _set_auth_cookies(response: Response, refresh_token: str, csrf_token: str) -
     common = {
         "secure": settings.auth_cookie_secure,
         "samesite": settings.auth_cookie_samesite,
-        "path": "/api/v1/auth",
+        "max_age": settings.refresh_token_expire_days * 24 * 60 * 60,
     }
     response.set_cookie(
         REFRESH_COOKIE,
         refresh_token,
         httponly=True,
-        max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
+        path="/api/v1/auth",
         **common,
     )
+    # The CSRF token must be readable by the SPA on every route.
     response.set_cookie(
         CSRF_COOKIE,
         csrf_token,
         httponly=False,
-        max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
+        path="/",
         **common,
     )
 
@@ -75,7 +76,7 @@ def _clear_auth_cookies(response: Response) -> None:
     )
     response.delete_cookie(
         CSRF_COOKIE,
-        path="/api/v1/auth",
+        path="/",
         secure=settings.auth_cookie_secure,
         httponly=False,
         samesite=settings.auth_cookie_samesite,
