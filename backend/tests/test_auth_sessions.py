@@ -58,6 +58,16 @@ def test_refresh_rotation_reuse_detection_and_logout():
             csrf = login.json()["csrf_token"]
             assert old_refresh and csrf
 
+            csrf_response = client.get("/api/v1/auth/csrf")
+            assert csrf_response.status_code == 200
+            assert csrf_response.json()["csrf_token"] == csrf
+
+            invalid_csrf = client.post(
+                "/api/v1/auth/refresh",
+                headers={"X-CSRF-Token": "incorrect"},
+            )
+            assert invalid_csrf.status_code == 403
+
             check = TestingSession()
             stored = check.scalar(
                 select(RefreshToken).where(
